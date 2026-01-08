@@ -1,24 +1,26 @@
 "use client";
+
 import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
 
-export default function AuthPage() {
-  const login = async () => {
-    const email = prompt("Enter your email");
-    if (!email) return;
+export default function AuthCallback() {
+  useEffect(() => {
+    const handleAuth = async () => {
+      const { data } = await supabase.auth.getSession();
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (error) alert(error.message);
-    else alert("Check your email for OTP");
-  };
+      if (data.session?.user) {
+        window.location.href = "/owner/dashboard";
+      } else {
+        window.location.href = "/";
+      }
+    };
+
+    handleAuth();
+  }, []);
 
   return (
-    <div className="h-screen flex items-center justify-center">
-      <button
-        onClick={login}
-        className="bg-black text-white px-6 py-3 rounded"
-      >
-        Login / Signup
-      </button>
+    <div className="min-h-screen flex items-center justify-center">
+      <p>Logging you in...</p>
     </div>
   );
 }
