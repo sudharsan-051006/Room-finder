@@ -1,65 +1,175 @@
-import Image from "next/image";
+"use client";
+
+import { supabase } from "@/lib/supabase";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function Home() {
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [location, setLocation] = useState("");
+  const [propertyType, setPropertyType] = useState("");
+  const [tenantPref, setTenantPref] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  // 🔹 carousel state → roomId : imageIndex
+  const [imageIndex, setImageIndex] = useState<{ [key: string]: number }>({});
+
+  /* ---------------- FETCH ROOMS ---------------- */
+  const fetchRooms = async () => {
+    let query = supabase
+      .from("rooms")
+      .select("*, room_images(image_url)")
+      .order("created_at", { ascending: false });
+
+    if (location) query = query.ilike("location", `%${location}%`);
+    if (propertyType) query = query.eq("property_type", propertyType);
+    if (tenantPref) query = query.eq("tenant_preference", tenantPref);
+    if (maxPrice) query = query.lte("price", Number(maxPrice));
+
+    const { data } = await query;
+    setRooms(data || []);
+  };
+
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  /* ---------------- CAROUSEL CONTROLS ---------------- */
+  const nextImage = (roomId: string, total: number) => {
+    setImageIndex((prev) => ({
+      ...prev,
+      [roomId]: ((prev[roomId] ?? 0) + 1) % total,
+    }));
+  };
+
+  const prevImage = (roomId: string, total: number) => {
+    setImageIndex((prev) => ({
+      ...prev,
+      [roomId]:
+        (prev[roomId] ?? 0) === 0 ? total - 1 : (prev[roomId] ?? 0) - 1,
+    }));
+  };
+
+  /* ---------------- UI ---------------- */
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen p-6">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">🏠 Room Finder</h1>
+
+        <Link
+          href="/auth"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Owner Login
+        </Link>
+      </div>
+
+      {/* Filters */}
+      <div className="grid md:grid-cols-4 gap-3 mb-4">
+        <input
+          placeholder="Search by location"
+          className="input"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        <input
+          placeholder="Property Type (1 BHK)"
+          className="input"
+          value={propertyType}
+          onChange={(e) => setPropertyType(e.target.value)}
+        />
+
+        <input
+          placeholder="Tenant Preference"
+          className="input"
+          value={tenantPref}
+          onChange={(e) => setTenantPref(e.target.value)}
+        />
+
+        <input
+          placeholder="Max Price"
+          type="number"
+          className="input"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={fetchRooms}
+        className="bg-black text-white px-4 py-2 rounded mb-6"
+      >
+        Search
+      </button>
+
+      {/* Room Cards */}
+      {rooms.length === 0 ? (
+        <p>No rooms found.</p>
+      ) : (
+        <div className="grid md:grid-cols-3 gap-6">
+          {rooms.map((room) => (
+            <div key={room.id} className="border rounded overflow-hidden">
+              {/* IMAGE CAROUSEL */}
+              {room.room_images?.length > 0 ? (
+                <div className="relative h-48 w-full">
+                  <img
+                    src={
+                      room.room_images[
+                        imageIndex[room.id] ?? 0
+                      ].image_url
+                    }
+                    className="h-48 w-full object-cover"
+                  />
+
+                  {room.room_images.length > 1 && (
+                    <>
+                      {/* Left */}
+                      <button
+                        onClick={() =>
+                          prevImage(room.id, room.room_images.length)
+                        }
+                        className="absolute top-1/2 left-2 -translate-y-1/2 bg-black/60 text-white px-2 py-1 rounded"
+                      >
+                        ‹
+                      </button>
+
+                      {/* Right */}
+                      <button
+                        onClick={() =>
+                          nextImage(room.id, room.room_images.length)
+                        }
+                        className="absolute top-1/2 right-2 -translate-y-1/2 bg-black/60 text-white px-2 py-1 rounded"
+                      >
+                        ›
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="h-48 bg-gray-200 flex items-center justify-center">
+                  No Image
+                </div>
+              )}
+
+              {/* Details */}
+              <div className="p-4">
+                <h2 className="font-semibold">{room.title}</h2>
+                <p className="text-sm text-gray-600">{room.location}</p>
+                <p className="mt-1 font-medium">₹{room.price}</p>
+                <p className="text-sm">
+                  {room.property_type} | {room.tenant_preference}
+                </p>
+
+                <p className="mt-2 text-sm font-medium">
+                  📞 {room.contact_number}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      )}
+    </main>
   );
 }
