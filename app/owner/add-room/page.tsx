@@ -16,6 +16,7 @@ export default function AddRoom() {
   const [propertyType, setPropertyType] = useState("");
   const [tenantPref, setTenantPref] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [description, setDescription] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
 
   // Get logged-in user once
@@ -69,6 +70,7 @@ export default function AddRoom() {
         property_type: normalizedPropertyType,
         tenant_preference: normalizedTenantPref,
         contact_number: contactNumber.trim(),
+        description: description.trim() || null,
       })
       .select()
       .single();
@@ -127,6 +129,7 @@ export default function AddRoom() {
     setPropertyType("");
     setTenantPref("");
     setContactNumber("");
+    setDescription("");
     setImages(null);
   };
 
@@ -136,6 +139,10 @@ export default function AddRoom() {
       <div className={`${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'} shadow-sm border-b`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
+            <Link href="/" className={`${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} font-medium transition-colors`}>
+              ← Back to Home
+            </Link>
+
             <div className="flex items-center gap-4">
               {/* Theme Toggle Button */}
               <button
@@ -282,6 +289,23 @@ export default function AddRoom() {
                     : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
                 }`}
                 required
+              />
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Description <span className="text-xs text-slate-500">(Optional)</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., Fully furnished with WiFi, parking available, close to metro station..."
+                rows={4}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${
+                  darkMode 
+                    ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-400' 
+                    : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'
+                }`}
               />
             </div>
 
