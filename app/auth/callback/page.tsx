@@ -6,10 +6,8 @@ import { useEffect } from "react";
 export default function AuthCallback() {
   useEffect(() => {
     const resolveLogin = async () => {
-      let attempts = 0;
-
-      // Wait until Supabase finishes creating the session
-      while (attempts < 15) {
+      // Wait until Supabase creates the session
+      for (let i = 0; i < 15; i++) {
         const { data } = await supabase.auth.getSession();
 
         if (data.session?.user) {
@@ -18,10 +16,9 @@ export default function AuthCallback() {
         }
 
         await new Promise((res) => setTimeout(res, 300));
-        attempts++;
       }
 
-      // Fallback (should not happen)
+      // Fallback (should rarely happen)
       window.location.replace("/");
     };
 
