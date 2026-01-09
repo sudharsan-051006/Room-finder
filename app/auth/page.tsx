@@ -10,7 +10,7 @@ export default function AuthPage() {
     await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: "https://room-finder.vercel.app/auth/callback",
+        emailRedirectTo: "https://room-finder-theta.vercel.app/owner/dashboard",
       },
     });
 
