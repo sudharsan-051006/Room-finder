@@ -233,9 +233,6 @@ export default function OwnerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <Link href="/" className={`${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} text-sm font-medium mb-2 inline-block`}>
-                ← Back to Home
-              </Link>
               <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>My Rooms</h1>
             </div>
 
