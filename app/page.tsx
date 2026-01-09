@@ -6,27 +6,14 @@ import Link from "next/link";
 
 export default function Home() {
   const [rooms, setRooms] = useState<any[]>([]);
-  const [location, setLocation] = useState("");
-  const [propertyType, setPropertyType] = useState("");
-  const [tenantPref, setTenantPref] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-
-  // 🔹 carousel state → roomId : imageIndex
   const [imageIndex, setImageIndex] = useState<{ [key: string]: number }>({});
 
-  /* ---------------- FETCH ROOMS ---------------- */
   const fetchRooms = async () => {
-    let query = supabase
+    const { data } = await supabase
       .from("rooms")
       .select("*, room_images(image_url)")
       .order("created_at", { ascending: false });
 
-    if (location) query = query.ilike("location", `%${location}%`);
-    if (propertyType) query = query.eq("property_type", propertyType);
-    if (tenantPref) query = query.eq("tenant_preference", tenantPref);
-    if (maxPrice) query = query.lte("price", Number(maxPrice));
-
-    const { data } = await query;
     setRooms(data || []);
   };
 
@@ -34,7 +21,6 @@ export default function Home() {
     fetchRooms();
   }, []);
 
-  /* ---------------- CAROUSEL CONTROLS ---------------- */
   const nextImage = (roomId: string, total: number) => {
     setImageIndex((prev) => ({
       ...prev,
@@ -50,7 +36,6 @@ export default function Home() {
     }));
   };
 
-  /* ---------------- UI ---------------- */
   return (
     <main className="min-h-screen p-6">
       {/* Header */}
@@ -65,55 +50,16 @@ export default function Home() {
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="grid md:grid-cols-4 gap-3 mb-4">
-        <input
-          placeholder="Search by location"
-          className="input"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-        />
-
-        <input
-          placeholder="Property Type (1 BHK)"
-          className="input"
-          value={propertyType}
-          onChange={(e) => setPropertyType(e.target.value)}
-        />
-
-        <input
-          placeholder="Tenant Preference"
-          className="input"
-          value={tenantPref}
-          onChange={(e) => setTenantPref(e.target.value)}
-        />
-
-        <input
-          placeholder="Max Price"
-          type="number"
-          className="input"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
-      </div>
-
-      <button
-        onClick={fetchRooms}
-        className="bg-black text-white px-4 py-2 rounded mb-6"
-      >
-        Search
-      </button>
-
-      {/* Room Cards */}
+      {/* Rooms */}
       {rooms.length === 0 ? (
-        <p>No rooms found.</p>
+        <p>No rooms available.</p>
       ) : (
         <div className="grid md:grid-cols-3 gap-6">
           {rooms.map((room) => (
             <div key={room.id} className="border rounded overflow-hidden">
-              {/* IMAGE CAROUSEL */}
+              {/* Image Carousel */}
               {room.room_images?.length > 0 ? (
-                <div className="relative h-48 w-full">
+                <div className="relative h-48">
                   <img
                     src={
                       room.room_images[
@@ -125,22 +71,19 @@ export default function Home() {
 
                   {room.room_images.length > 1 && (
                     <>
-                      {/* Left */}
                       <button
                         onClick={() =>
                           prevImage(room.id, room.room_images.length)
                         }
-                        className="absolute top-1/2 left-2 -translate-y-1/2 bg-black/60 text-white px-2 py-1 rounded"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white px-2 rounded"
                       >
                         ‹
                       </button>
-
-                      {/* Right */}
                       <button
                         onClick={() =>
                           nextImage(room.id, room.room_images.length)
                         }
-                        className="absolute top-1/2 right-2 -translate-y-1/2 bg-black/60 text-white px-2 py-1 rounded"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white px-2 rounded"
                       >
                         ›
                       </button>
@@ -157,11 +100,10 @@ export default function Home() {
               <div className="p-4">
                 <h2 className="font-semibold">{room.title}</h2>
                 <p className="text-sm text-gray-600">{room.location}</p>
-                <p className="mt-1 font-medium">₹{room.price}</p>
+                <p className="font-medium">₹{room.price}</p>
                 <p className="text-sm">
                   {room.property_type} | {room.tenant_preference}
                 </p>
-
                 <p className="mt-2 text-sm font-medium">
                   📞 {room.contact_number}
                 </p>
