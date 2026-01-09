@@ -18,7 +18,7 @@ export default function Home() {
   // 🖼️ Carousel state
   const [imageIndex, setImageIndex] = useState<{ [key: string]: number }>({});
 
-  /* ---------------- FETCH ROOMS ---------------- */
+  /* ---------------- FETCH ROOMS WITH CASE-INSENSITIVE SEARCH ---------------- */
   const fetchRooms = async () => {
     setLoading(true);
 
@@ -27,18 +27,22 @@ export default function Home() {
       .select("*, room_images(image_url)")
       .order("created_at", { ascending: false });
 
+    // Case-insensitive location search using ilike
     if (location) {
-      query = query.ilike("location", `%${location}%`);
+      query = query.ilike("location", `%${location.trim()}%`);
     }
 
+    // Case-insensitive property type search
     if (propertyType) {
-      query = query.eq("property_type", propertyType);
+      query = query.ilike("property_type", propertyType);
     }
 
+    // Case-insensitive tenant preference search
     if (tenantPref) {
-      query = query.eq("tenant_preference", tenantPref);
+      query = query.ilike("tenant_preference", tenantPref);
     }
 
+    // Price filter
     if (maxPrice) {
       query = query.lte("price", Number(maxPrice));
     }
@@ -61,6 +65,13 @@ export default function Home() {
   const toggleTheme = () => {
     setDarkMode(!darkMode);
     localStorage.setItem('theme', !darkMode ? 'dark' : 'light');
+  };
+
+  // Handle Enter key press for search
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      fetchRooms();
+    }
   };
 
   /* ---------------- CAROUSEL ---------------- */
@@ -129,6 +140,7 @@ export default function Home() {
               }`}
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
 
             <select
@@ -174,19 +186,39 @@ export default function Home() {
               }`}
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
           </div>
 
-          <button
-            onClick={fetchRooms}
-            className={`w-full md:w-auto px-8 py-2.5 rounded-lg font-medium transition-colors shadow-sm ${
-              darkMode 
-                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                : 'bg-slate-800 hover:bg-slate-900 text-white'
-            }`}
-          >
-            🔍 Search Rooms
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={fetchRooms}
+              className={`px-8 py-2.5 rounded-lg font-medium transition-colors shadow-sm ${
+                darkMode 
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                  : 'bg-slate-800 hover:bg-slate-900 text-white'
+              }`}
+            >
+              🔍 Search Rooms
+            </button>
+            
+            <button
+              onClick={() => {
+                setLocation("");
+                setPropertyType("");
+                setTenantPref("");
+                setMaxPrice("");
+                fetchRooms();
+              }}
+              className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
+                darkMode 
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600' 
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
+              }`}
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
 
         {/* ROOM LIST */}
