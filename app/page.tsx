@@ -12,6 +12,7 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState<boolean | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedRoom, setSelectedRoom] = useState<any>(null);
 
   // 🔍 Search & filter states
   const [location, setLocation] = useState("");
@@ -21,6 +22,7 @@ export default function Home() {
 
   // 🖼️ Carousel state
   const [imageIndex, setImageIndex] = useState<{ [key: string]: number }>({});
+  const [modalImageIndex, setModalImageIndex] = useState(0);
 
   // Initialize theme from system preference
   useEffect(() => {
@@ -31,7 +33,6 @@ export default function Home() {
     } else if (savedTheme === 'light') {
       setDarkMode(false);
     } else {
-      // Use system preference
       const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       setDarkMode(systemPrefersDark);
     }
@@ -45,19 +46,16 @@ export default function Home() {
     const from = (page - 1) * ITEMS_PER_PAGE;
     const to = from + ITEMS_PER_PAGE - 1;
 
-    // Build query for count
     let countQuery = supabase
       .from("rooms")
       .select("*", { count: 'exact', head: true });
 
-    // Build query for data
     let dataQuery = supabase
       .from("rooms")
       .select("*, room_images(image_url)")
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    // Apply filters to both queries
     if (location) {
       const locationFilter = `%${location.trim()}%`;
       countQuery = countQuery.ilike("location", locationFilter);
@@ -79,7 +77,6 @@ export default function Home() {
       dataQuery = dataQuery.lte("price", Number(maxPrice));
     }
 
-    // Fetch count and data
     const { count } = await countQuery;
     const { data } = await dataQuery;
 
@@ -87,7 +84,6 @@ export default function Home() {
     setRooms(data || []);
     setLoading(false);
 
-    // Scroll to top when page changes
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -97,18 +93,29 @@ export default function Home() {
     }
   }, [darkMode]);
 
-  // Toggle theme
   const toggleTheme = () => {
     const newTheme = !darkMode;
     setDarkMode(newTheme);
     localStorage.setItem('theme', newTheme ? 'dark' : 'light');
   };
 
-  // Handle Enter key press for search
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       fetchRooms(1);
     }
+  };
+
+  // Open room details modal
+  const openRoomDetails = (room: any) => {
+    setSelectedRoom(room);
+    setModalImageIndex(0);
+    document.body.style.overflow = 'hidden'; // Prevent background scroll
+  };
+
+  // Close room details modal
+  const closeRoomDetails = () => {
+    setSelectedRoom(null);
+    document.body.style.overflow = 'auto';
   };
 
   /* ---------------- CAROUSEL ---------------- */
@@ -127,12 +134,25 @@ export default function Home() {
     }));
   };
 
+  const nextModalImage = () => {
+    if (selectedRoom?.room_images) {
+      setModalImageIndex((prev) => (prev + 1) % selectedRoom.room_images.length);
+    }
+  };
+
+  const prevModalImage = () => {
+    if (selectedRoom?.room_images) {
+      setModalImageIndex((prev) => 
+        prev === 0 ? selectedRoom.room_images.length - 1 : prev - 1
+      );
+    }
+  };
+
   // Calculate pagination
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
   const startItem = totalCount === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
   const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalCount);
 
-  // Generate page numbers to show
   const getPageNumbers = () => {
     const pages = [];
     const maxPagesToShow = 5;
@@ -184,7 +204,6 @@ export default function Home() {
             </h1>
 
             <div className="flex items-center gap-4">
-              {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
                 className={`p-2.5 rounded-lg transition-all ${
@@ -209,7 +228,7 @@ export default function Home() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 🔍 SEARCH & FILTER BAR */}
+        {/* Search & Filter Bar */}
         <div className={`${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white'} rounded-xl shadow-md p-6 mb-8 border`}>
           <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-700'} mb-4`}>Find Your Perfect Room</h2>
           <div className="grid md:grid-cols-4 gap-4 mb-4">
@@ -310,7 +329,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ROOM LIST */}
+        {/* Room List */}
         {loading ? (
           <div className="text-center py-12">
             <div className={`inline-block animate-spin rounded-full h-12 w-12 border-b-2 ${darkMode ? 'border-blue-400' : 'border-blue-600'}`}></div>
@@ -325,16 +344,16 @@ export default function Home() {
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {rooms.map((room) => (
-                <div key={room.id} className={`${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white'} rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow border`}>
+                <div 
+                  key={room.id} 
+                  onClick={() => openRoomDetails(room)}
+                  className={`${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white'} rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all border cursor-pointer transform hover:scale-105`}
+                >
                   {/* Image Carousel */}
                   {room.room_images?.length > 0 ? (
                     <div className={`relative h-56 ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
                       <img
-                        src={
-                          room.room_images[
-                            imageIndex[room.id] ?? 0
-                          ].image_url
-                        }
+                        src={room.room_images[imageIndex[room.id] ?? 0].image_url}
                         className="h-56 w-full object-cover"
                         alt={room.title}
                       />
@@ -342,18 +361,20 @@ export default function Home() {
                       {room.room_images.length > 1 && (
                         <>
                           <button
-                            onClick={() =>
-                              prevImage(room.id, room.room_images.length)
-                            }
-                            className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              prevImage(room.id, room.room_images.length);
+                            }}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all z-10"
                           >
                             ‹
                           </button>
                           <button
-                            onClick={() =>
-                              nextImage(room.id, room.room_images.length)
-                            }
-                            className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              nextImage(room.id, room.room_images.length);
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white w-8 h-8 rounded-full flex items-center justify-center transition-all z-10"
                           >
                             ›
                           </button>
@@ -470,7 +491,124 @@ export default function Home() {
           </>
         )}
       </div>
+
+      {/* Room Details Modal */}
+      {selectedRoom && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto"
+          onClick={closeRoomDetails}
+        >
+          <div 
+            className={`${darkMode ? 'bg-slate-900' : 'bg-white'} rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <div className="sticky top-0 z-10 flex justify-end p-4 bg-gradient-to-b from-black/50 to-transparent">
+              <button
+                onClick={closeRoomDetails}
+                className="bg-white/90 hover:bg-white text-slate-800 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Image Gallery */}
+            {selectedRoom.room_images?.length > 0 ? (
+              <div className="relative -mt-14">
+                <img
+                  src={selectedRoom.room_images[modalImageIndex].image_url}
+                  className="w-full h-96 object-cover"
+                  alt={selectedRoom.title}
+                />
+                {selectedRoom.room_images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevModalImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={nextModalImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all"
+                    >
+                      ›
+                    </button>
+                    <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1.5 rounded-full">
+                      {modalImageIndex + 1} / {selectedRoom.room_images.length}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className={`h-96 ${darkMode ? 'bg-slate-800' : 'bg-slate-200'} flex items-center justify-center`}>
+                <span className={`text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No Image Available</span>
+              </div>
+            )}
+
+            {/* Room Details */}
+            <div className="p-8">
+              <h1 className={`text-3xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                {selectedRoom.title}
+              </h1>
+
+              <div className={`flex items-center gap-2 mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                <span className="text-xl">📍</span>
+                <p className="text-lg">{selectedRoom.location}</p>
+              </div>
+
+              <div className="mb-6">
+                <p className={`text-4xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  ₹{selectedRoom.price}<span className="text-lg font-normal">/month</span>
+                </p>
+              </div>
+
+              <div className="flex gap-3 mb-6 flex-wrap">
+                <span className={`px-4 py-2 rounded-lg font-medium ${
+                  darkMode 
+                    ? 'bg-slate-800 text-slate-300' 
+                    : 'bg-slate-100 text-slate-700'
+                }`}>
+                  {selectedRoom.property_type}
+                </span>
+                <span className={`px-4 py-2 rounded-lg font-medium ${
+                  darkMode 
+                    ? 'bg-blue-900/50 text-blue-300' 
+                    : 'bg-blue-50 text-blue-700'
+                }`}>
+                  {selectedRoom.tenant_preference}
+                </span>
+              </div>
+
+              {selectedRoom.description && (
+                <div className="mb-6">
+                  <h2 className={`text-xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                    Description
+                  </h2>
+                  <p className={`leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {selectedRoom.description}
+                  </p>
+                </div>
+              )}
+
+              <div className={`pt-6 border-t ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+                <h2 className={`text-xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                  Contact Information
+                </h2>
+                <div className={`flex items-center gap-3 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <span className="text-2xl">📞</span>
+                  <a 
+                    href={`tel:${selectedRoom.contact_number}`}
+                    className="text-xl font-semibold hover:text-blue-600 transition-colors"
+                  >
+                    {selectedRoom.contact_number}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
-  
 }
