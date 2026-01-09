@@ -90,18 +90,31 @@ export default function Home() {
           onChange={(e) => setLocation(e.target.value)}
         />
 
-        <select
-          className="input"
-          value={propertyType}
-          onChange={(e) => setPropertyType(e.target.value)}
-        >
-          <option value="">Property Type</option>
-          <option value="1 BHK">1 BHK</option>
-          <option value="2 BHK">2 BHK</option>
-          <option value="3 BHK">3 BHK</option>
-          <option value="1 Bed">1 Bed</option>
-          <option value="2 Bed">2 Bed</option>
-        </select>
+      <select
+        className="input bg-black text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        value={propertyType}
+        onChange={(e) => setPropertyType(e.target.value)}
+      >
+        <option value="" className="text-black">
+          Property Type
+        </option>
+        <option value="1 BHK" className="text-black">
+          1 BHK
+        </option>
+        <option value="2 BHK" className="text-black">
+          2 BHK
+        </option>
+        <option value="3 BHK" className="text-black">
+          3 BHK
+        </option>
+        <option value="1 Bed" className="text-black">
+          1 Bed
+        </option>
+        <option value="2 Bed" className="text-black">
+          2 Bed
+        </option>
+      </select>
+
 
         <select
           className="input"
