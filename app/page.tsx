@@ -88,10 +88,9 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (darkMode !== null) {
-      fetchRooms(1);
-    }
-  }, [darkMode]);
+    fetchRooms(1);
+  }, []);
+
 
   const toggleTheme = () => {
     const newTheme = !darkMode;
