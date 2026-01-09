@@ -16,6 +16,9 @@ export default function OwnerDashboard() {
     tenant_preference: "",
     contact_number: ""
   });
+  const [newImages, setNewImages] = useState<FileList | null>(null);
+  const [deletingImages, setDeletingImages] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // Initialize theme
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function OwnerDashboard() {
 
       const { data, error } = await supabase
         .from("rooms")
-        .select("*, room_images(image_url)")
+        .select("*, room_images(id, image_url)")
         .eq("owner_id", userData.user.id)
         .order("created_at", { ascending: false });
 
@@ -78,6 +81,8 @@ export default function OwnerDashboard() {
       tenant_preference: room.tenant_preference,
       contact_number: room.contact_number
     });
+    setNewImages(null);
+    setDeletingImages([]);
   };
 
   // Cancel editing
@@ -91,13 +96,27 @@ export default function OwnerDashboard() {
       tenant_preference: "",
       contact_number: ""
     });
+    setNewImages(null);
+    setDeletingImages([]);
+  };
+
+  // Mark image for deletion
+  const toggleImageDeletion = (imageId: string) => {
+    setDeletingImages(prev => 
+      prev.includes(imageId) 
+        ? prev.filter(id => id !== imageId)
+        : [...prev, imageId]
+    );
   };
 
   // Save edited room
   const saveEdit = async () => {
     if (!editingRoom) return;
 
-    const { error } = await supabase
+    setUploadingImages(true);
+
+    // 1. Update room details
+    const { error: updateError } = await supabase
       .from("rooms")
       .update({
         title: editForm.title.trim(),
@@ -109,18 +128,77 @@ export default function OwnerDashboard() {
       })
       .eq("id", editingRoom.id);
 
-    if (error) {
-      alert(error.message);
+    if (updateError) {
+      alert(updateError.message);
+      setUploadingImages(false);
       return;
     }
+
+    // 2. Delete marked images
+    if (deletingImages.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("room_images")
+        .delete()
+        .in("id", deletingImages);
+
+      if (deleteError) {
+        alert("Error deleting images: " + deleteError.message);
+      }
+    }
+
+    // 3. Upload new images
+    if (newImages && newImages.length > 0) {
+      const imageRecords: any[] = [];
+
+      for (let i = 0; i < newImages.length; i++) {
+        const file = newImages[i];
+        const filePath = `${editingRoom.id}/${Date.now()}-${file.name}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("room-images")
+          .upload(filePath, file);
+
+        if (uploadError) {
+          alert("Error uploading image: " + uploadError.message);
+          continue;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("room-images")
+          .getPublicUrl(filePath);
+
+        imageRecords.push({
+          room_id: editingRoom.id,
+          image_url: urlData.publicUrl,
+        });
+      }
+
+      if (imageRecords.length > 0) {
+        const { error: imageError } = await supabase
+          .from("room_images")
+          .insert(imageRecords);
+
+        if (imageError) {
+          alert("Error saving image URLs: " + imageError.message);
+        }
+      }
+    }
+
+    // 4. Refresh the room data
+    const { data: updatedRoom } = await supabase
+      .from("rooms")
+      .select("*, room_images(id, image_url)")
+      .eq("id", editingRoom.id)
+      .single();
 
     // Update local state
     setRooms(prev => prev.map(room => 
       room.id === editingRoom.id 
-        ? { ...room, ...editForm }
+        ? updatedRoom
         : room
     ));
 
+    setUploadingImages(false);
     alert("Room updated successfully!");
     cancelEdit();
   };
@@ -217,6 +295,65 @@ export default function OwnerDashboard() {
                   <div className="p-6">
                     <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-slate-800'}`}>Edit Room Details</h3>
                     
+                    {/* Room Images Section */}
+                    <div className="mb-6">
+                      <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Current Images (Click to mark for deletion)
+                      </label>
+                      
+                      {room.room_images?.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          {room.room_images.map((img: any) => (
+                            <div
+                              key={img.id}
+                              onClick={() => toggleImageDeletion(img.id)}
+                              className={`relative cursor-pointer rounded-lg overflow-hidden border-4 transition-all ${
+                                deletingImages.includes(img.id)
+                                  ? 'border-red-500 opacity-50'
+                                  : darkMode
+                                    ? 'border-slate-700 hover:border-blue-500'
+                                    : 'border-slate-200 hover:border-blue-400'
+                              }`}
+                            >
+                              <img
+                                src={img.image_url}
+                                alt="Room"
+                                className="w-full h-32 object-cover"
+                              />
+                              {deletingImages.includes(img.id) && (
+                                <div className="absolute inset-0 bg-red-600/70 flex items-center justify-center">
+                                  <span className="text-white font-bold text-lg">✗ Delete</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          No images yet
+                        </p>
+                      )}
+
+                      <div className={`border-2 border-dashed rounded-lg p-4 ${
+                        darkMode 
+                          ? 'border-slate-600 hover:border-slate-500' 
+                          : 'border-slate-300 hover:border-slate-400'
+                      } transition-colors`}>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => setNewImages(e.target.files)}
+                          className={`w-full cursor-pointer ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}
+                        />
+                        <p className={`text-sm mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {newImages && newImages.length > 0 
+                            ? `${newImages.length} new image(s) selected`
+                            : 'Add new images (optional)'}
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -324,17 +461,21 @@ export default function OwnerDashboard() {
                     <div className="flex gap-3">
                       <button
                         onClick={saveEdit}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+                        disabled={uploadingImages}
+                        className={`bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors ${
+                          uploadingImages ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                       >
-                        ✓ Save Changes
+                        {uploadingImages ? '⏳ Saving...' : '✓ Save Changes'}
                       </button>
                       <button
                         onClick={cancelEdit}
+                        disabled={uploadingImages}
                         className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
                           darkMode 
                             ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600' 
                             : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'
-                        }`}
+                        } ${uploadingImages ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         Cancel
                       </button>
@@ -345,11 +486,18 @@ export default function OwnerDashboard() {
                   <div className="flex gap-4 p-6">
                     {/* Image */}
                     {room.room_images?.length > 0 ? (
-                      <img
-                        src={room.room_images[0].image_url}
-                        alt="Room"
-                        className="w-48 h-36 object-cover rounded-lg flex-shrink-0"
-                      />
+                      <div className="w-48 flex-shrink-0">
+                        <img
+                          src={room.room_images[0].image_url}
+                          alt="Room"
+                          className="w-full h-36 object-cover rounded-lg"
+                        />
+                        {room.room_images.length > 1 && (
+                          <p className={`text-xs mt-1 text-center ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            +{room.room_images.length - 1} more
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <div className={`w-48 h-36 ${darkMode ? 'bg-slate-800' : 'bg-gray-200'} flex items-center justify-center text-sm rounded-lg flex-shrink-0 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                         No Image
