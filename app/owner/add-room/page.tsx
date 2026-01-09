@@ -136,10 +136,6 @@ export default function AddRoom() {
       <div className={`${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'} shadow-sm border-b`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex justify-between items-center">
-            <Link href="/" className={`${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} font-medium transition-colors`}>
-              ← Back to Home
-            </Link>
-
             <div className="flex items-center gap-4">
               {/* Theme Toggle Button */}
               <button
