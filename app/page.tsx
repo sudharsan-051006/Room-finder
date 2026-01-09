@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 9;
 
 export default function Home() {
   const [rooms, setRooms] = useState<any[]>([]);
