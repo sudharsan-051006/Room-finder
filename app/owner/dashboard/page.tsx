@@ -14,7 +14,8 @@ export default function OwnerDashboard() {
     price: "",
     property_type: "",
     tenant_preference: "",
-    contact_number: ""
+    contact_number: "",
+    description: ""
   });
   const [newImages, setNewImages] = useState<FileList | null>(null);
   const [deletingImages, setDeletingImages] = useState<string[]>([]);
@@ -79,7 +80,8 @@ export default function OwnerDashboard() {
       price: room.price,
       property_type: room.property_type,
       tenant_preference: room.tenant_preference,
-      contact_number: room.contact_number
+      contact_number: room.contact_number,
+      description: room.description || ""
     });
     setNewImages(null);
     setDeletingImages([]);
@@ -94,7 +96,8 @@ export default function OwnerDashboard() {
       price: "",
       property_type: "",
       tenant_preference: "",
-      contact_number: ""
+      contact_number: "",
+      description: ""
     });
     setNewImages(null);
     setDeletingImages([]);
@@ -124,7 +127,8 @@ export default function OwnerDashboard() {
         price: editForm.price,
         property_type: editForm.property_type,
         tenant_preference: editForm.tenant_preference,
-        contact_number: editForm.contact_number.trim()
+        contact_number: editForm.contact_number.trim(),
+        description: editForm.description.trim()
       })
       .eq("id", editingRoom.id);
 
@@ -455,6 +459,24 @@ export default function OwnerDashboard() {
                       </div>
                     </div>
 
+                    {/* Description Field */}
+                    <div className="mb-4">
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Description
+                      </label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                        rows={4}
+                        placeholder="Add details about the room, amenities, nearby facilities, etc."
+                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          darkMode 
+                            ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' 
+                            : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                        }`}
+                      />
+                    </div>
+
                     <div className="flex gap-3">
                       <button
                         onClick={saveEdit}
@@ -526,9 +548,14 @@ export default function OwnerDashboard() {
                           {room.tenant_preference}
                         </span>
                       </div>
-                      <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <p className={`text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                         📞 {room.contact_number}
                       </p>
+                      {room.description && (
+                        <p className={`text-sm mt-3 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                          {room.description}
+                        </p>
+                      )}
                     </div>
 
                     {/* Actions */}
