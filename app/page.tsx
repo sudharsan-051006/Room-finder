@@ -6,21 +6,52 @@ import Link from "next/link";
 
 export default function Home() {
   const [rooms, setRooms] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🔍 Search & filter states
+  const [location, setLocation] = useState("");
+  const [propertyType, setPropertyType] = useState("");
+  const [tenantPref, setTenantPref] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  // 🖼️ Carousel state
   const [imageIndex, setImageIndex] = useState<{ [key: string]: number }>({});
 
+  /* ---------------- FETCH ROOMS ---------------- */
   const fetchRooms = async () => {
-    const { data } = await supabase
+    setLoading(true);
+
+    let query = supabase
       .from("rooms")
       .select("*, room_images(image_url)")
       .order("created_at", { ascending: false });
 
+    if (location) {
+      query = query.ilike("location", `%${location}%`);
+    }
+
+    if (propertyType) {
+      query = query.eq("property_type", propertyType);
+    }
+
+    if (tenantPref) {
+      query = query.eq("tenant_preference", tenantPref);
+    }
+
+    if (maxPrice) {
+      query = query.lte("price", Number(maxPrice));
+    }
+
+    const { data } = await query;
     setRooms(data || []);
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchRooms();
   }, []);
 
+  /* ---------------- CAROUSEL ---------------- */
   const nextImage = (roomId: string, total: number) => {
     setImageIndex((prev) => ({
       ...prev,
@@ -50,9 +81,61 @@ export default function Home() {
         </Link>
       </div>
 
-      {/* Rooms */}
-      {rooms.length === 0 ? (
-        <p>No rooms available.</p>
+      {/* 🔍 SEARCH & FILTER BAR */}
+      <div className="grid md:grid-cols-4 gap-3 mb-4">
+        <input
+          placeholder="Search by location"
+          className="input"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+        />
+
+        <select
+          className="input"
+          value={propertyType}
+          onChange={(e) => setPropertyType(e.target.value)}
+        >
+          <option value="">Property Type</option>
+          <option value="1 BHK">1 BHK</option>
+          <option value="2 BHK">2 BHK</option>
+          <option value="3 BHK">3 BHK</option>
+          <option value="1 Bed">1 Bed</option>
+          <option value="2 Bed">2 Bed</option>
+        </select>
+
+        <select
+          className="input"
+          value={tenantPref}
+          onChange={(e) => setTenantPref(e.target.value)}
+        >
+          <option value="">Tenant Preference</option>
+          <option value="Bachelor">Bachelor</option>
+          <option value="Family">Family</option>
+          <option value="Girls">Girls</option>
+          <option value="Working">Working</option>
+        </select>
+
+        <input
+          type="number"
+          placeholder="Max Price"
+          className="input"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={fetchRooms}
+        className="bg-black text-white px-6 py-2 rounded mb-6"
+      >
+        Search
+      </button>
+
+      {/* ROOM LIST */}
+      {loading ? (
+        <p>Loading rooms...</p>
+      ) : rooms.length === 0 ? (
+        <p>No rooms found.</p>
       ) : (
         <div className="grid md:grid-cols-3 gap-6">
           {rooms.map((room) => (
