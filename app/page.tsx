@@ -106,11 +106,11 @@ export default function Home() {
               onChange={(e) => setPropertyType(e.target.value)}
             >
               <option value="">Property Type</option>
-              <option value="1 BHK">1 BHK</option>
-              <option value="2 BHK">2 BHK</option>
-              <option value="3 BHK">3 BHK</option>
-              <option value="1 Bed">1 Bed</option>
-              <option value="2 Bed">2 Bed</option>
+              <option value="1BHK">1 BHK</option>
+              <option value="2BHK">2 BHK</option>
+              <option value="3BHK">3 BHK</option>
+              <option value="1Bed">1 Bed</option>
+              <option value="2Bed">2 Bed</option>
             </select>
 
             <select
